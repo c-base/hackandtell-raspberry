@@ -4,6 +4,7 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 #include "ofxNetwork.h"
+#include "wiringPi.h"
 
 class ofApp : public ofBaseApp{
 
@@ -52,7 +53,7 @@ public:
 
     bool isMenuHidden;
     bool isTimerRunning;
-    bool showApplause;
+    ofxToggle showApplause;
     int applauseTextColor;
     int applauseBackgroundColor;
     // buffers for variable strings on the display

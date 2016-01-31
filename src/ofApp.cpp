@@ -5,6 +5,10 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    if(wiringPiSetup() == -1){
+    	printf("Error on wiringPi setup");
+    }
+    pinMode(8,OUTPUT);
     ofSetVerticalSync(true);
     resetButton.addListener(this,&ofApp::resetButtonPressed);
     
@@ -23,6 +27,7 @@ void ofApp::setup(){
     gui.add(resetButton.setup("Reset timer (r)"));
     gui.add(paused.setup("Pause (p/space)", true));
     gui.add(minutes.setup("Minutes", 5, 1, 120));
+    gui.add(showApplause.setup("Show applause (a)", false));
     gui.add(showMatelightPreview.setup("Show ML preview", false));
 
     
@@ -48,7 +53,12 @@ void ofApp::resetButtonPressed() {
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    updateTimeLeft();
+    if (!showApplause) {
+    	updateTimeLeft();
+    }
+    else {
+        paused = true;
+    }
     
     // update time left display
     int minutes = millisecondsLeft / 1000 / 60;
@@ -74,6 +84,9 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::updateTimeLeft(){
+    if (showApplause) {
+        return;
+    }
     if (paused) {
         lastTime = 0;
         return;
@@ -151,10 +164,12 @@ void ofApp::drawStringMono(ofTrueTypeFont* font, std::string text, float x, floa
 void ofApp::drawApplause() {
     int now = ofGetSeconds();
     if (now % 2 == 0) {
+        digitalWrite(8, HIGH) ;
         ofSetColor(0, 0, 0);
         ofBackground(255, 255, 255);
         signsFont.drawString("APPLAUSE", 155, 250);
     } else {
+        digitalWrite(8, LOW) ;
         ofBackground(0, 0, 0);
         ofSetColor(255, 255, 255);
         signsFont.drawString("APPLAUSE", 155, 250);
@@ -176,6 +191,7 @@ void ofApp::draw(){
     if (showApplause) {
         drawApplause();
     } else {
+        digitalWrite(8, LOW);
         drawCountDown();
     }
     if (showMatelightPreview) {
@@ -199,7 +215,9 @@ void ofApp::keyPressed(int key){
         isMenuHidden = !isMenuHidden;
         return;
     }
-    
+    if (key == 'a') {
+        showApplause = !showApplause;
+    }
     if (key == 'r') {
         resetButtonPressed();
         return;
