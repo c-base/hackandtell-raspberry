@@ -12,3 +12,16 @@ Needs http://openframeworks.cc/ to compile.
     cd hackandtell-raspberry
     make && make run 
     # or use XCode or other IDE to compile
+
+## Host Build with Docker
+
+* `./build.sh`
+
+### Runtime Dependencies
+
+* Ubuntu: `sudo apt install libfreeimage3`
+
+### Run
+
+* `bin/hackandtell-raspberry`
+
