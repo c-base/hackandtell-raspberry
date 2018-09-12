@@ -4,7 +4,9 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 #include "ofxNetwork.h"
+#if defined(WITH_GPIO)
 #include "wiringPi.h"
+#endif
 
 class ofApp : public ofBaseApp{
 

@@ -25,7 +25,15 @@
 #   this makefile.  For instance, if you want to make changes based on whether
 #   GTK is installed, one might test that here and create a variable to check. 
 ################################################################################
-# None
+# Assume that if the wiringPi library is not installed then we're building
+# without GPIO support.
+WIRINGPI_EXISTS = $(shell sh -c 'ldconfig -p | grep libwiringPi | wc -l')
+ifeq ($(WIRINGPI_EXISTS),0)
+	WITH_GPIO := 1
+else
+	WITH_GPIO := 0
+endif
+
 
 ################################################################################
 # PROJECT EXTERNAL SOURCE PATHS
@@ -78,7 +86,9 @@
 # incorporated directly into the final executable application binary.
 # TODO: should this be a default setting?
 PROJECT_LDFLAGS=-Wl,-rpath=./libs
+ifeq ($(WITH_GPIO),0)
 PROJECT_LDFLAGS += -lwiringPi
+endif
 
 ################################################################################
 # PROJECT DEFINES
@@ -89,7 +99,7 @@ PROJECT_LDFLAGS += -lwiringPi
 #
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-# PROJECT_DEFINES = 
+#PROJECT_DEFINES = WITH_GPIO
 
 ################################################################################
 # PROJECT CFLAGS
