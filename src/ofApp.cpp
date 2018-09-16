@@ -5,10 +5,12 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+#if defined(WITH_GPIO)
     if(wiringPiSetup() == -1){
     	printf("Error on wiringPi setup");
     }
     pinMode(8,OUTPUT);
+#endif
     ofSetVerticalSync(true);
     resetButton.addListener(this,&ofApp::resetButtonPressed);
     
@@ -164,12 +166,16 @@ void ofApp::drawStringMono(ofTrueTypeFont* font, std::string text, float x, floa
 void ofApp::drawApplause() {
     int now = ofGetSeconds();
     if (now % 2 == 0) {
+#if defined(WITH_GPIO)
         digitalWrite(8, HIGH) ;
+#endif
         ofSetColor(0, 0, 0);
         ofBackground(255, 255, 255);
         signsFont.drawString("APPLAUSE", 155, 250);
     } else {
+#if defined(WITH_GPIO)
         digitalWrite(8, LOW) ;
+#endif
         ofBackground(0, 0, 0);
         ofSetColor(255, 255, 255);
         signsFont.drawString("APPLAUSE", 155, 250);
@@ -191,7 +197,9 @@ void ofApp::draw(){
     if (showApplause) {
         drawApplause();
     } else {
+#if defined(WITH_GPIO)
         digitalWrite(8, LOW);
+#endif
         drawCountDown();
     }
     if (showMatelightPreview) {
