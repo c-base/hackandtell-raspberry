@@ -29,6 +29,7 @@ public:
 
     void updateTimeLeft();
     void updateMatelight(std::string minutes);
+    void urlResponse(ofHttpResponse & response);
     void drawStringMono(ofTrueTypeFont* font, std::string text, float x, float y, float w);
     void drawApplause();
     void drawCountDown();
@@ -50,21 +51,20 @@ public:
     ofPixels matelightPixels;
     ofPixels matelightSmall;
     ofImage matelightPreview;
-    
     ofxUDPManager udpConnection;
 
     bool isMenuHidden;
     bool isTimerRunning;
     ofxToggle showApplause;
+    ofxToggle showWinners;
     int applauseTextColor;
     int applauseBackgroundColor;
     // buffers for variable strings on the display
     char localTimeStr[100];
     char timeLeftStr[100];
     // application state
-    
     int millisecondsTotal;
     int millisecondsLeft;
     int lastTime;
-    
+    std::string winners;
 };

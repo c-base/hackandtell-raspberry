@@ -1,6 +1,8 @@
 #include <ctime>
 #include <iostream>
+#include <iterator>
 #include <locale>
+#include <regex>
 #include "ofApp.h"
 
 //--------------------------------------------------------------
@@ -30,6 +32,7 @@ void ofApp::setup(){
     gui.add(paused.setup("Pause (p/space)", true));
     gui.add(minutes.setup("Minutes", 5, 1, 120));
     gui.add(showApplause.setup("Show applause (a)", false));
+    gui.add(showWinners.setup("Show winners (w)", false));
     gui.add(showMatelightPreview.setup("Show ML preview", false));
 
     
@@ -44,6 +47,7 @@ void ofApp::setup(){
     udpConnection.Connect("10.0.1.39", 1337);
     udpConnection.SetNonBlocking(true);
 
+    ofRegisterURLNotification(this);
 }
 
 void ofApp::resetButtonPressed() {
@@ -55,38 +59,38 @@ void ofApp::resetButtonPressed() {
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    if (!showApplause) {
-    	updateTimeLeft();
-    }
-    else {
-        paused = true;
-    }
-    
-    // update time left display
-    int minutes = millisecondsLeft / 1000 / 60;
-    int seconds = (millisecondsLeft - (minutes * 60 * 1000)) / 1000;
-    int millis = millisecondsLeft - (minutes * 1000 * 60) - (seconds * 1000);
+    std::string s1;
 
-    std::stringstream ss;
-    ss << setfill('0') << setw(2) << seconds;
-    std::stringstream ms;
-    ms << setfill('0') << setw(3) << millis;
-    
-    std::string s1 = ofToString(minutes) + ":" + ofToString(ss.str());
-    std::string s2 = s1 + "." + ofToString(ms.str());
-    
-    
-    strncpy(timeLeftStr, s2.c_str(), sizeof(timeLeftStr));
-    // update the local time
-    std::time_t t = std::time(NULL);
-    std::strftime(localTimeStr, sizeof(localTimeStr), "%H:%M:%S", std::localtime(&t));
+    updateTimeLeft();
+
+    if (showWinners) {
+        s1 = winners;
+    } else {
+        // update time left display
+        int minutes = millisecondsLeft / 1000 / 60;
+        int seconds = (millisecondsLeft - (minutes * 60 * 1000)) / 1000;
+        int millis = millisecondsLeft - (minutes * 1000 * 60) - (seconds * 1000);
+
+        std::stringstream ss;
+        ss << setfill('0') << setw(2) << seconds;
+        std::stringstream ms;
+        ms << setfill('0') << setw(3) << millis;
+
+        s1 = ofToString(minutes) + ":" + ofToString(ss.str());
+        std::string s2 = s1 + "." + ofToString(ms.str());
+
+        strncpy(timeLeftStr, s2.c_str(), sizeof(timeLeftStr));
+        // update the local time
+        std::time_t t = std::time(NULL);
+        std::strftime(localTimeStr, sizeof(localTimeStr), "%H:%M:%S", std::localtime(&t));
+    }
     
     updateMatelight(s1);
 }
 
 //--------------------------------------------------------------
 void ofApp::updateTimeLeft(){
-    if (showApplause) {
+    if (showApplause || showWinners) {
         return;
     }
     if (paused) {
@@ -143,6 +147,25 @@ void ofApp::updateMatelight(std::string text) {
     message[1922] = 0x0;
     message[1923] = 0x0;
     udpConnection.Send(message, 1924);
+}
+
+void ofApp::urlResponse(ofHttpResponse & response) {
+    if (response.status == 200 && response.request.name == "async_req") {
+        std::string s = response.data.getText();
+        std::regex regex("[0-9]+");
+        winners.clear();
+        for (std::sregex_iterator i = std::sregex_iterator(s.begin(), s.end(), regex); i != std::sregex_iterator(); ++i) {
+            std::smatch match = *i;
+            winners += match.str() + " ";
+        }
+        // if there are no winners this will show a blank screen
+        // allowing the game master to retry getting the winners
+        showWinners = true;
+    } else {
+        ofRemoveAllURLRequests();
+        ofStopURLLoader();
+        // cerr << response.status << " " << response.error << endl;
+    }
 }
 
 //--------------------------------------------------------------
@@ -215,6 +238,7 @@ void ofApp::draw(){
 void ofApp::exit()
 {
     resetButton.removeListener(this,&ofApp::resetButtonPressed);
+    ofUnregisterURLNotification(this);
 }
 
 //--------------------------------------------------------------
@@ -225,9 +249,18 @@ void ofApp::keyPressed(int key){
     }
     if (key == 'a') {
         showApplause = !showApplause;
+        paused = true;
     }
     if (key == 'r') {
         resetButtonPressed();
+        return;
+    }
+    if (key == 'w') {
+        // if not shown, async HTTP GET winners
+        if (!showWinners)
+            ofLoadURLAsync("http://localhost:8080/winners", "async_req"); // FIXME need static IP for bhnt-vote
+        // if shown, hide
+        showWinners = false;
         return;
     }
     
