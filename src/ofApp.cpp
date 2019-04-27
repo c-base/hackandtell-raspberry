@@ -243,33 +243,40 @@ void ofApp::exit()
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key == 'h') {
+    switch (key) {
+    case 'h':
+    case 'H':
         isMenuHidden = !isMenuHidden;
-        return;
-    }
-    if (key == 'a') {
+        break;
+    case 'a':
+    case 'A':
         showApplause = !showApplause;
         paused = true;
-    }
-    if (key == 'r') {
+        break;
+    case 'r':
+    case 'R':
         resetButtonPressed();
-        return;
-    }
-    if (key == 'w') {
+        break;
+    case 'w':
+    case 'W':
         // if not shown, async HTTP GET winners
         if (!showWinners)
-            ofLoadURLAsync("http://localhost:80/winners", "async_req"); // FIXME need static IP for bhnt-vote
+            ofLoadURLAsync("http://localhost:80/winners", "async_req");
         // if shown, hide
         showWinners = false;
-        return;
-    }
-    
-    if (key == 'p' || key == ' ') {
+        break;
+    case 'p':
+    case 'P':
+    case ' ':
         paused = !paused;
-    }
-    
-    if (key == 'q') {
+        break;
+    case 'q':
+    case 'Q':
         ofExit();
+        break;
+    default:
+        /* do nothing with unknown keys */
+        break;
     }
 }
 
