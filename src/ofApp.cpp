@@ -15,6 +15,8 @@ void ofApp::setup(){
 #endif
     ofSetVerticalSync(true);
     resetButton.addListener(this,&ofApp::resetButtonPressed);
+
+    ofSetEscapeQuitsApp(false);
     
     matelightFont.loadFont("OSP-DIN.ttf", 68, true, true, true);
     signsFont.loadFont("OSP-DIN.ttf", 100, true, true, true );
