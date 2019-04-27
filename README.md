@@ -15,6 +15,8 @@ Needs http://openframeworks.cc/ to compile.
 
 ## Host Build with Docker
 
+Pass the `--shell` argument to get an interactive shell inside the build container.
+
 * `./build.sh`
 
 ### Runtime Dependencies
