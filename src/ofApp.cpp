@@ -258,7 +258,7 @@ void ofApp::keyPressed(int key){
     if (key == 'w') {
         // if not shown, async HTTP GET winners
         if (!showWinners)
-            ofLoadURLAsync("http://localhost:8080/winners", "async_req"); // FIXME need static IP for bhnt-vote
+            ofLoadURLAsync("http://localhost:80/winners", "async_req"); // FIXME need static IP for bhnt-vote
         // if shown, hide
         showWinners = false;
         return;
