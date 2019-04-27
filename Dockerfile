@@ -22,7 +22,7 @@ RUN wget --no-check-certificate http://openframeworks.cc/versions/v${OF_VERSION}
     mkdir -p /opt/openFrameworks && \
     tar -xzvf of_v${OF_VERSION}_linux64_release.tar.gz -C /opt/openFrameworks --strip-components 1 && \
     /opt/openFrameworks/scripts/linux/ubuntu/install_dependencies.sh -y && \
-    /opt/openFrameworks/scripts/linux/compileOF.sh -j3
+    /opt/openFrameworks/scripts/linux/compileOF.sh -j`nproc`
 
 # Add user that matches host user
 ARG BUILD_UID=1000

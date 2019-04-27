@@ -14,5 +14,4 @@ if ! grep -c docker /proc/1/cgroup > /dev/null; then
     exit $?
 fi
 
-make
-
+make -j`nproc`
