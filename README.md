@@ -13,17 +13,17 @@ Needs http://openframeworks.cc/ to compile.
     make && make run 
     # or use XCode or other IDE to compile
 
-## Host Build with Docker
+## Build
 
-Pass the `--shell` argument to get an interactive shell inside the build container.
+* Pass the `--shell` argument to get an interactive shell inside the build container.
+* Pass the `armv6` argument to build for the armv6 (e.g. Raspberry Pi).
 
 * `./build.sh`
 
 ### Runtime Dependencies
 
-* Ubuntu: `sudo apt install libfreeimage3`
+* Ubuntu 16.04: `sudo apt install libfreeimage3 libglfw3 liburiparser1`
 
 ### Run
 
 * `bin/hackandtell-raspberry`
-
