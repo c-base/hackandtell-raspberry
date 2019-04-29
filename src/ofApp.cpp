@@ -3,6 +3,7 @@
 #include <iterator>
 #include <locale>
 #include <regex>
+#include <sstream>
 #include "ofApp.h"
 
 //--------------------------------------------------------------
@@ -35,9 +36,10 @@ void ofApp::setup(){
     gui.add(minutes.setup("Minutes", 5, 1, 120));
     gui.add(showApplause.setup("Show applause (a)", false));
     gui.add(showWinners.setup("Show winners (w)", false));
+    gui.add(showCount.setup("Show vote count (v)", false));
     gui.add(showMatelightPreview.setup("Show ML preview", false));
 
-    
+
     millisecondsTotal = minutes;
     millisecondsLeft = minutes * 60 * 1000;
     
@@ -56,6 +58,11 @@ void ofApp::resetButtonPressed() {
     paused = true;
     showApplause = false;
     millisecondsLeft = minutes * 60 * 1000;
+    ofRemoveAllURLRequests();
+    ofStopURLLoader();
+    showWinners = false;
+    showCount = false;
+    queueGetCount = false;
 }
 
 
@@ -67,6 +74,14 @@ void ofApp::update(){
 
     if (showWinners) {
         s1 = winners;
+        showCount = false;
+    } else if (showCount) {
+        s1 = count;
+        // queue another if the last update was successful
+        if (queueGetCount) {
+            queueGetCount = false;
+            ofLoadURLAsync("http://localhost:80/count", "async_req");
+        }
     } else {
         // update time left display
         int minutes = millisecondsLeft / 1000 / 60;
@@ -154,19 +169,29 @@ void ofApp::updateMatelight(std::string text) {
 void ofApp::urlResponse(ofHttpResponse & response) {
     if (response.status == 200 && response.request.name == "async_req") {
         std::string s = response.data.getText();
-        std::regex regex("[0-9]+");
-        winners.clear();
-        for (std::sregex_iterator i = std::sregex_iterator(s.begin(), s.end(), regex); i != std::sregex_iterator(); ++i) {
-            std::smatch match = *i;
-            winners += match.str() + " ";
+        if (response.request.url.find("winners") != std::string::npos) {
+            std::regex regex("[0-9]+");
+            winners.clear();
+            for (std::sregex_iterator i = std::sregex_iterator(s.begin(), s.end(), regex); i != std::sregex_iterator(); ++i) {
+                std::smatch match = *i;
+                winners += match.str() + " ";
+            }
+            // if there are no winners this will show a blank screen
+            // allowing the game master to retry getting the winners
+            showWinners = true;
+        } else if (response.request.url.find("count") != std::string::npos) {
+            cerr << "Count: " << s << endl;
+            std::stringstream stream;
+            stream << "0x" << setfill('0') << setw(2) << std::hex << std::stoi(s);
+            count = stream.str();
+            // queue an update on success
+            queueGetCount = true;
         }
-        // if there are no winners this will show a blank screen
-        // allowing the game master to retry getting the winners
-        showWinners = true;
     } else {
-        ofRemoveAllURLRequests();
-        ofStopURLLoader();
         // cerr << response.status << " " << response.error << endl;
+        // if an error occurs, clear the results in case they are no longer valid
+        count.clear();
+        winners.clear();
     }
 }
 
@@ -258,6 +283,12 @@ void ofApp::keyPressed(int key){
     case 'r':
     case 'R':
         resetButtonPressed();
+        break;
+    case 'v':
+    case 'V':
+        showCount = !showCount;
+        if (!showCount)
+            ofLoadURLAsync("http://localhost:80/count", "async_req");
         break;
     case 'w':
     case 'W':

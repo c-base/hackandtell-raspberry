@@ -56,6 +56,7 @@ public:
     bool isMenuHidden;
     bool isTimerRunning;
     ofxToggle showApplause;
+    ofxToggle showCount;
     ofxToggle showWinners;
     int applauseTextColor;
     int applauseBackgroundColor;
@@ -67,4 +68,6 @@ public:
     int millisecondsLeft;
     int lastTime;
     std::string winners;
+    std::string count;
+    ofxToggle queueGetCount;
 };
