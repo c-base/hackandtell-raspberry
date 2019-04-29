@@ -14,7 +14,7 @@ if ! grep -c docker /proc/1/cgroup > /dev/null; then
     exit $?
 fi
 
-rm bin/hackandtell-raspberry
+rm -f bin/hackandtell-raspberry
 
 if [[ ${1} == "armv6" ]]; then
     source cross.env
