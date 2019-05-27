@@ -1,6 +1,9 @@
 #include <ctime>
 #include <iostream>
+#include <iterator>
 #include <locale>
+#include <regex>
+#include <sstream>
 #include "ofApp.h"
 
 //--------------------------------------------------------------
@@ -13,6 +16,8 @@ void ofApp::setup(){
 #endif
     ofSetVerticalSync(true);
     resetButton.addListener(this,&ofApp::resetButtonPressed);
+
+    ofSetEscapeQuitsApp(false);
     
     matelightFont.loadFont("OSP-DIN.ttf", 68, true, true, true);
     signsFont.loadFont("OSP-DIN.ttf", 100, true, true, true );
@@ -30,9 +35,11 @@ void ofApp::setup(){
     gui.add(paused.setup("Pause (p/space)", true));
     gui.add(minutes.setup("Minutes", 5, 1, 120));
     gui.add(showApplause.setup("Show applause (a)", false));
+    gui.add(showWinners.setup("Show winners (w)", false));
+    gui.add(showCount.setup("Show vote count (v)", false));
     gui.add(showMatelightPreview.setup("Show ML preview", false));
 
-    
+
     millisecondsTotal = minutes;
     millisecondsLeft = minutes * 60 * 1000;
     
@@ -44,49 +51,63 @@ void ofApp::setup(){
     udpConnection.Connect("10.0.1.39", 1337);
     udpConnection.SetNonBlocking(true);
 
+    ofRegisterURLNotification(this);
 }
 
 void ofApp::resetButtonPressed() {
     paused = true;
     showApplause = false;
     millisecondsLeft = minutes * 60 * 1000;
+    ofRemoveAllURLRequests();
+    ofStopURLLoader();
+    showWinners = false;
+    showCount = false;
+    queueGetCount = false;
 }
 
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    if (!showApplause) {
-    	updateTimeLeft();
-    }
-    else {
-        paused = true;
-    }
-    
-    // update time left display
-    int minutes = millisecondsLeft / 1000 / 60;
-    int seconds = (millisecondsLeft - (minutes * 60 * 1000)) / 1000;
-    int millis = millisecondsLeft - (minutes * 1000 * 60) - (seconds * 1000);
+    std::string s1;
 
-    std::stringstream ss;
-    ss << setfill('0') << setw(2) << seconds;
-    std::stringstream ms;
-    ms << setfill('0') << setw(3) << millis;
-    
-    std::string s1 = ofToString(minutes) + ":" + ofToString(ss.str());
-    std::string s2 = s1 + "." + ofToString(ms.str());
-    
-    
-    strncpy(timeLeftStr, s2.c_str(), sizeof(timeLeftStr));
-    // update the local time
-    std::time_t t = std::time(NULL);
-    std::strftime(localTimeStr, sizeof(localTimeStr), "%H:%M:%S", std::localtime(&t));
+    updateTimeLeft();
+
+    if (showWinners) {
+        s1 = winners;
+        showCount = false;
+    } else if (showCount) {
+        s1 = count;
+        // queue another if the last update was successful
+        if (queueGetCount) {
+            queueGetCount = false;
+            ofLoadURLAsync("http://localhost:80/count", "async_req");
+        }
+    } else {
+        // update time left display
+        int minutes = millisecondsLeft / 1000 / 60;
+        int seconds = (millisecondsLeft - (minutes * 60 * 1000)) / 1000;
+        int millis = millisecondsLeft - (minutes * 1000 * 60) - (seconds * 1000);
+
+        std::stringstream ss;
+        ss << setfill('0') << setw(2) << seconds;
+        std::stringstream ms;
+        ms << setfill('0') << setw(3) << millis;
+
+        s1 = ofToString(minutes) + ":" + ofToString(ss.str());
+        std::string s2 = s1 + "." + ofToString(ms.str());
+
+        strncpy(timeLeftStr, s2.c_str(), sizeof(timeLeftStr));
+        // update the local time
+        std::time_t t = std::time(NULL);
+        std::strftime(localTimeStr, sizeof(localTimeStr), "%H:%M:%S", std::localtime(&t));
+    }
     
     updateMatelight(s1);
 }
 
 //--------------------------------------------------------------
 void ofApp::updateTimeLeft(){
-    if (showApplause) {
+    if (showApplause || showWinners) {
         return;
     }
     if (paused) {
@@ -143,6 +164,35 @@ void ofApp::updateMatelight(std::string text) {
     message[1922] = 0x0;
     message[1923] = 0x0;
     udpConnection.Send(message, 1924);
+}
+
+void ofApp::urlResponse(ofHttpResponse & response) {
+    if (response.status == 200 && response.request.name == "async_req") {
+        std::string s = response.data.getText();
+        if (response.request.url.find("winners") != std::string::npos) {
+            std::regex regex("[0-9]+");
+            winners.clear();
+            for (std::sregex_iterator i = std::sregex_iterator(s.begin(), s.end(), regex); i != std::sregex_iterator(); ++i) {
+                std::smatch match = *i;
+                winners += match.str() + " ";
+            }
+            // if there are no winners this will show a blank screen
+            // allowing the game master to retry getting the winners
+            showWinners = true;
+        } else if (response.request.url.find("count") != std::string::npos) {
+            cerr << "Count: " << s << endl;
+            std::stringstream stream;
+            stream << "0x" << setfill('0') << setw(2) << std::hex << std::stoi(s);
+            count = stream.str();
+            // queue an update on success
+            queueGetCount = true;
+        }
+    } else {
+        // cerr << response.status << " " << response.error << endl;
+        // if an error occurs, clear the results in case they are no longer valid
+        count.clear();
+        winners.clear();
+    }
 }
 
 //--------------------------------------------------------------
@@ -215,28 +265,51 @@ void ofApp::draw(){
 void ofApp::exit()
 {
     resetButton.removeListener(this,&ofApp::resetButtonPressed);
+    ofUnregisterURLNotification(this);
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key == 'h') {
+    switch (key) {
+    case 'h':
+    case 'H':
         isMenuHidden = !isMenuHidden;
-        return;
-    }
-    if (key == 'a') {
+        break;
+    case 'a':
+    case 'A':
         showApplause = !showApplause;
-    }
-    if (key == 'r') {
+        paused = true;
+        break;
+    case 'r':
+    case 'R':
         resetButtonPressed();
-        return;
-    }
-    
-    if (key == 'p' || key == ' ') {
+        break;
+    case 'v':
+    case 'V':
+        showCount = !showCount;
+        if (!showCount)
+            ofLoadURLAsync("http://localhost:80/count", "async_req");
+        break;
+    case 'w':
+    case 'W':
+        // if not shown, async HTTP GET winners
+        if (!showWinners)
+            ofLoadURLAsync("http://localhost:80/winners", "async_req");
+        // if shown, hide
+        showWinners = false;
+        break;
+    case 'p':
+    case 'P':
+    case ' ':
         paused = !paused;
-    }
-    
-    if (key == 'q') {
+        break;
+    case 'q':
+    case 'Q':
         ofExit();
+        break;
+    default:
+        /* do nothing with unknown keys */
+        break;
     }
 }
 
